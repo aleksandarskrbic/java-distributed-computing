@@ -3,6 +3,8 @@ package io.github.aleksandar;
 import org.apache.zookeeper.*;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 public class LeaderElection implements Watcher {
     private static final int SESSION_TIMEOUT = 3000;
@@ -33,11 +35,25 @@ public class LeaderElection implements Watcher {
     }
 
     public void volunteerForLeadership() throws InterruptedException, KeeperException {
-        final String zkNodePrefix = ELECTION_NAMESPACE + "/c_";
-        final String zkNodeFullPath = zk.create(zkNodePrefix, new byte[]{}, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+        final var zkNodePrefix = ELECTION_NAMESPACE + "/c_";
+        final var zkNodeFullPath = zk.create(zkNodePrefix, new byte[]{}, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
 
         System.out.println("zkNodeFullPath: " + zkNodeFullPath);
         this.currentZkNodeName = zkNodeFullPath.replace(ELECTION_NAMESPACE + "/", "");
+    }
+
+    public void electLeader() throws InterruptedException, KeeperException {
+        final var children = zk.getChildren(ELECTION_NAMESPACE, false);
+        Collections.sort(children);
+
+        final var smallestChild = children.get(0);
+
+        if (smallestChild.equals(currentZkNodeName)) {
+            System.out.println("I am the leader");
+            return;
+        }
+
+        System.out.println("I am not the leader. " + smallestChild + " is the leader.");
     }
 
     public void run() throws InterruptedException {
