@@ -28,3 +28,7 @@ gradle
 gradlew
 gradlew.bat
 build
+
+.DS_Store
+
+apache-zookeeper-3.8.0-bin

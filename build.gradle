@@ -1,9 +1,14 @@
 plugins {
-    id 'java'
+    id 'application'
 }
 
 group 'io.github.aleksandar'
 version '1.0-SNAPSHOT'
+sourceCompatibility = 1.17
+
+application {
+    mainClass = 'io.github.aleksandar.Main'
+}
 
 repositories {
     mavenCentral()
