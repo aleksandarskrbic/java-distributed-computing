@@ -15,7 +15,9 @@ public class LeaderElection implements Watcher {
     private String currentZkNodeName;
 
     public LeaderElection() throws IOException {
+        System.out.println("Creating Leader Election");
         this.zk = new ZooKeeper(ZK_ADDRESS, SESSION_TIMEOUT, this);
+        System.out.println("Created Leader Election");
     }
 
     @Override
@@ -43,7 +45,7 @@ public class LeaderElection implements Watcher {
 
     public void volunteerForLeadership() throws InterruptedException, KeeperException {
         final var zkNodePrefix = ELECTION_NAMESPACE + "/c_";
-        final var zkNodeFullPath = zk.create(zkNodePrefix, new byte[]{}, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+        final var zkNodeFullPath = zk.create(zkNodePrefix, new byte[]{}, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
 
         System.out.println("zkNodeFullPath: " + zkNodeFullPath);
         this.currentZkNodeName = zkNodeFullPath.replace(ELECTION_NAMESPACE + "/", "");
@@ -61,6 +63,7 @@ public class LeaderElection implements Watcher {
 
             if (smallestChild.equals(currentZkNodeName)) {
                 System.out.println("I am the leader");
+                break;
             } else {
                 System.out.println("I am not the leader. " + smallestChild + " is the leader.");
                 int predecessorIndex = Collections.binarySearch(children, currentZkNodeName) - 1;
