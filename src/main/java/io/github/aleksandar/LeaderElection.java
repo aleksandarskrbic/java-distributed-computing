@@ -1,10 +1,10 @@
 package io.github.aleksandar;
 
 import org.apache.zookeeper.*;
+import org.apache.zookeeper.data.Stat;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 
 public class LeaderElection implements Watcher {
     private static final int SESSION_TIMEOUT = 3000;
@@ -31,6 +31,13 @@ public class LeaderElection implements Watcher {
                     }
                 }
             }
+            case NodeDeleted -> {
+                    try {
+                        reelectLeader();
+                    } catch (final InterruptedException | KeeperException e) {
+                        throw new RuntimeException(e);
+                    }
+            }
         }
     }
 
@@ -42,18 +49,28 @@ public class LeaderElection implements Watcher {
         this.currentZkNodeName = zkNodeFullPath.replace(ELECTION_NAMESPACE + "/", "");
     }
 
-    public void electLeader() throws InterruptedException, KeeperException {
-        final var children = zk.getChildren(ELECTION_NAMESPACE, false);
-        Collections.sort(children);
+    public void reelectLeader() throws InterruptedException, KeeperException {
+        Stat predecessorStat = null;
+        var predecessorZkNodeName = "";
 
-        final var smallestChild = children.get(0);
+        while (predecessorStat == null) {
+            final var children = zk.getChildren(ELECTION_NAMESPACE, false);
 
-        if (smallestChild.equals(currentZkNodeName)) {
-            System.out.println("I am the leader");
-            return;
+            Collections.sort(children);
+            final var smallestChild = children.get(0);
+
+            if (smallestChild.equals(currentZkNodeName)) {
+                System.out.println("I am the leader");
+            } else {
+                System.out.println("I am not the leader. " + smallestChild + " is the leader.");
+                int predecessorIndex = Collections.binarySearch(children, currentZkNodeName) - 1;
+                predecessorZkNodeName = children.get(predecessorIndex);
+                predecessorStat = zk.exists(ELECTION_NAMESPACE + "/" + predecessorZkNodeName, this);
+            }
         }
 
-        System.out.println("I am not the leader. " + smallestChild + " is the leader.");
+        System.out.println("Watching znode: " + predecessorZkNodeName);
+        System.out.println();
     }
 
     public void run() throws InterruptedException {

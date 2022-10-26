@@ -10,6 +10,12 @@ application {
     mainClass = 'io.github.aleksandar.Main'
 }
 
+jar {
+    manifest {
+        attributes 'Main-Class': 'io.github.aleksandar.Main'
+    }
+}
+
 repositories {
     mavenCentral()
 }
