@@ -1,7 +1,6 @@
 package io.github.aleksandar;
 
 import org.apache.zookeeper.*;
-
 import java.io.File;
 import java.io.IOException;
 
@@ -43,37 +42,40 @@ public class AutoHealer implements Watcher {
     }
 
     @Override
-    public void process(WatchedEvent event) {
+    public void process(final WatchedEvent event) {
         switch (event.getType()) {
-            case None -> {
-                if (event.getState() == Event.KeeperState.SyncConnected) {
-                    System.out.println("Successfully connected to Zookeeper");
-                } else {
-                    synchronized (zooKeeper) {
-                        System.out.println("Disconnected from Zookeeper event");
-                        zooKeeper.notifyAll();
-                    }
-                }
+            case None -> handleEvent(event);
+            case NodeChildrenChanged -> launchWorkersIfNecessary();
+        }
+    }
+
+    private void handleEvent(final WatchedEvent event) {
+        if (event.getState() == Event.KeeperState.SyncConnected) {
+            System.out.println("Successfully connected to Zookeeper");
+        } else {
+            synchronized (zooKeeper) {
+                System.out.println("Disconnected from Zookeeper event");
+                zooKeeper.notifyAll();
             }
-            /**
-             * Add states code here to respond to the relevant events
-             */
         }
     }
 
     private void launchWorkersIfNecessary() {
-        /**
-         * Implement this method to watch and launch new workers if necessary
-         */
+        try {
+            var children = zooKeeper.getChildren(AUTOHEALER_ZNODES_PATH, this);
+            if (children.size() < numberOfWorkers) {
+                startNewWorker();
+            }
+        } catch (final KeeperException | IOException | InterruptedException ex) {
+            ex.printStackTrace();
+            System.out.println("Shutting down application...");
+            System.exit(1);
+        }
     }
 
-    /**
-     * Helper method to start a single worker
-     * @throws IOException
-     */
     private void startNewWorker() throws IOException {
-        File file = new File(pathToProgram);
-        String command = "java -jar " + file.getCanonicalPath();
+        var file = new File(pathToProgram);
+        var command = "java -jar " + file.getCanonicalPath();
         System.out.println(String.format("Launching worker instance : %s ", command));
         Runtime.getRuntime().exec(command, null, file.getParentFile());
     }
